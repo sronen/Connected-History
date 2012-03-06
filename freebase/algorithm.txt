@@ -1,0 +1,17 @@
+
+as long as i < len(search_set):
+	pick guid no. i from search_set
+	query connections and person properties for guid
+	write person properties to node table
+	store all connected_guids in connected_guid_list
+	for connected_guid in connected_guid_list:
+		write connection properties to edge table #### even if already connected through a different type
+		if connected_guid not in search_set:
+	 		add connected_guid to search_set
+	increment i
+	flush connected_guid_list
+
+### Notes:
+1. Multiple connections between nodes are allowed. Each connection is written in a separate line, so it's easier to distinguish properties.
+2. The connected_guid_list is flushed upon seed switch (whenever i is incremented)
+3. Search_set, as the name implies, doesn't not allow duplicates -- they're not necessary

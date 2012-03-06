@@ -1,0 +1,12 @@
+Freebase:
+
+- API:
+http://wiki.freebase.com/wiki/Python
+http://wiki.freebase.com/wiki/Freebase_API -- Google API
+
+- Query Editor: 
+http://www.freebase.com/queryeditor/
+http://www.freebase.com/queryeditor/about
+
+- Software packages (Python, etc.)
+http://wiki.freebase.com/wiki/Google_API_Client_Libraries

@@ -1,0 +1,4 @@
+# ignore MAC OS directory structure info
+.DS_Store
+# ignore compiled Python files
+*.pyc
