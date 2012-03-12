@@ -2,112 +2,151 @@ import sys            # Command-line arguments, etc.
 import metaweb        # Metaweb services
 
 
-def create_people_list(result_dict, full_conn_type):
-	# get a result dictionary returned by our query and populate a list of
-	# people. Assume dictionary contains name and guid, and add type of
-	# connection (conn_type)
-	
-	list_of_people = []
-	
-	for dude in result_dict[full_conn_type]:
-		short_conn_type = full_conn_type.split('/')[-1]
-		print "short conn type:", short_conn_type
-		dude['connection_to_d'] = short_conn_type
-		list_of_people.append(dude)
-		print "dude's name:", dude
-		
-	return list_of_people
+# Maximum number of people whose connections we retrieve. 
+# May increase as the code improves.
+MAX_NUM_OF_PEOPLE = 5
 
-
-def get_connected_people(person_name):
-	
-	query = {'type': '/people/person',       # Our MQL query in Python.
-		'name': person_name,                  # Place the band in the query.
+'''
+Query for a person using his/her Freebase guid (default is Darwin's), and retrieve his/her properties
+and connections. 
+Properties retrived: name, date of birth, place of birth. 
+Yet to be retrieved: gender, places_lived, place_of_birth, profession, religion
+Darwin's Freebase guid: #9202a8c04000641f800000000000cb7c
+'''
+def query_person_by_guid(person_guid='#9202a8c04000641f800000000000cb7c'):	
+	# Our MQL query in Python: fields with value 'None' are to be populated
+	# by query results
+	query = {'type': '/people/person',
+		'guid': person_guid,
+		'name': None,
+		'date_of_birth': None,
+		'place_of_birth': None,
 		'/influence/influence_node/influenced_by': [{'name':None, 'guid': None}],
 		'/influence/influence_node/peers': [{'name':None, 'guid': None}],
 		'/influence/influence_node/influenced': [{'name':None, 'guid': None}],
 		"/people/person/parents": [{'name':None, 'guid': None}],
 		"/people/person/sibling_s": [{'name':None, 'guid': None}],
 		"/people/person/children": [{'name':None, 'guid': None}],
-		"/people/person/spouse_s": [{'name':None, 'guid': None}]
+		"/people/person/spouse_s": [{'name':None, 'guid': None}],
 	}
 	
-	'''
-	query = {'type': '/people/person',       # Our MQL query in Python.
-		'name': person_name,                  # Place the band in the query.
-		'/influence/influence_node/influenced_by': [{'name':None, 'guid': None}]
-		}
-	'''
+	# Create a session object
+	freebase = metaweb.Session("api.freebase.com")
 	
-	freebase = metaweb.Session("api.freebase.com") # Create a session object
-	result = freebase.read(query)                 # Submit query, get results
+	# Submit query, get results
+	result = freebase.read(query)
+	
+	# Return properties
+	properties = extract_properties_from_results(result)
+	#print properties # debug
+	
+	# Return connections
+	connections = extract_connections_from_results(result)
+	#print connections # debug
+	
+	return connections, properties
 
-	people = []
 
-	if result:                                     # If we got a result
-		print "Darwin's  by %s:" % result['name']    # print the album names
-		#print "\n".join([influenced_by['name'] for influenced_by in result['/influence/influence_node/influenced_by']])
+'''
+Return a dictionary of properties
+'''
+def extract_properties_from_results(results):
+	properties = {}
+	
+	if results:
+		properties['name'] = results['name']
+		properties['date_of_birth'] = results['date_of_birth']
+		properties['place_of_birth'] = results['place_of_birth']
 		
-		people.extend( create_people_list(result,\
+	return properties
+
+
+'''
+Return a list of tuples: (guid, relationship type)
+'''
+def extract_connections_from_results(results):
+	connections = []
+	
+	if results:
+		# Add connected people of all available relationship types
+		# to the list, adding the type of the relationship to each
+		# connection as well.
+		connections.extend( create_people_list(results,\
 			'/influence/influence_node/influenced_by') )
-		people.extend( create_people_list(result,\
+		connections.extend( create_people_list(results,\
 			'/influence/influence_node/peers') )
-		people.extend( create_people_list(result,\
+		connections.extend( create_people_list(results,\
 			'/influence/influence_node/influenced') )
-		people.extend( create_people_list(result,\
+		connections.extend( create_people_list(results,\
 			'/people/person/parents') )
-		people.extend( create_people_list(result,\
+		connections.extend( create_people_list(results,\
 			'/people/person/sibling_s') )
-		people.extend( create_people_list(result,\
+		connections.extend( create_people_list(results,\
 			'/people/person/children') )
-		people.extend( create_people_list(result,\
+		connections.extend( create_people_list(results,\
 			'/people/person/spouse_s') )
 			
+	return connections
+
+
+def create_people_list(result_dict, full_conn_type):
+	# get a result dictionary returned by our query and populate a list of
+	# people. Assume dictionary contains name and guid, and add type of
+	# connection (conn_type)
 		
-		print people
-		'''
-		for dude in result['/influence/influence_node/influenced_by']:
-			dude['connection_to_d'] = 'influenced_by'
-			d_influenced_by.append(dude)
+	list_of_people = []
 		
-			print dude
-		'''
+	for dude in result_dict[full_conn_type]:
+		short_conn_type = full_conn_type.split('/')[-1]
+		#print "short conn type:", short_conn_type
+		dude['conn_type'] = short_conn_type
+		list_of_people.append(dude)
+		#print "dude's name:", dude
 		
-		'''
-		person_connections = \
-			result['/influence/influence_node/influenced_by'] + \
-			result['/influence/influence_node/peers'] + \
-			result['/influence/influence_node/influenced'] + \
-			result['/people/person/parents'] + \
-			result['/people/person/sibling_s'] + \
-			result['/people/person/children'] + \
-			result['/people/person/spouse_s']
-			
-		print person_connections
-		'''
+	return list_of_people
+
+
+def get_network_from_seed(seed_guid='#9202a8c04000641f800000000000cb7c'):
 	
-	else:
-		print  "No item %s found", person
+	nodefile = open('nodefile.csv', 'w')
+	edgefile = open('edgefile.csv', 'w')
+	
+	search_set = [] # can't iterate a mutating set, must be a list
+	search_set.append(seed_guid) # Darwin's is #9202a8c04000641f800000000000cb7c
+	
+	for i, person_guid in enumerate(search_set):
+		# TODO: May want to add a random timeout between iterations
+		# so we don't annoy Freebase.
 		
-	return people
+		print "******" 			# debug
+		print "Iteration:", i, "guid:", person_guid, \
+			"Items in search set:",  len(search_set)	# debug
+		print "******" 			# debug
+		if i>MAX_NUM_OF_PEOPLE:
+			# Hardstop for debugging: better make sure we get a small number
+			# of correct results before we harvest the entire site.
+			break
+		
+		connection_list, properties = query_person_by_guid(person_guid)
+		
+		# serialize properties to nodefile
+		print properties # debug
+		nodefile.write(person_guid + '\t' + '\t'.join(properties) + '\n') 
+		
+		# serialize connections to edgefile
+		for connection in connection_list:
+			print connection['guid'], connection['name'], connection['conn_type']
+			name = None if connection['name']==None else connection['name'].encode('utf-8')
+			edgefile.write(person_guid + '\t' + properties['name'] + '\t' + \
+				connection['guid'] + '\t' + str(name) + '\t' + \
+				str(connection['conn_type']) + '\n') 
+			if connection['guid'] not in search_set:
+				search_set.append(connection['guid'])
+			
+			# TODO: add counter for number of connections
+				
+	nodefile.close()
+	edgefile.close()
+	
+	return len(search_set)
 
-
-'''
-properties:
-date_of_birth
-gender
-places_lived
-place_of_birth
-profession
-religion
-
-guid --> Darwin's is  #9202a8c04000641f800000000000cb7c
-
-potential links:
-children
-parents
-/influence/influence_node/influenced_by
-/influence/influence_node/peers
-/influence/influence_node/influenced
-
-'''
