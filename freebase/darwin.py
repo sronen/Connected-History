@@ -57,7 +57,7 @@ def extract_properties_from_results(results):
 		properties['name'] = results['name']
 		properties['date_of_birth'] = results['date_of_birth']
 		properties['place_of_birth'] = results['place_of_birth']
-		
+	
 	return properties
 
 
@@ -131,7 +131,7 @@ def get_network_from_seed(seed_guid='#9202a8c04000641f800000000000cb7c'):
 		
 		# serialize properties to nodefile
 		print properties # debug
-		nodefile.write(person_guid + '\t' + '\t'.join(properties) + '\n') 
+		nodefile.write(person_guid + '\t' + '\t'.join(properties.values()) + '\n') 
 		
 		# serialize connections to edgefile
 		for connection in connection_list:
