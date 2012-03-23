@@ -1,11 +1,6 @@
 import sys            # Command-line arguments, etc.
 import metaweb        # Metaweb services
 
-
-# Maximum number of people whose connections we retrieve. 
-# May increase as the code improves.
-MAX_NUM_OF_PEOPLE = 5
-
 '''
 Query for a person using his/her Freebase guid (default is Darwin's), and retrieve his/her properties
 and connections. 
@@ -21,13 +16,15 @@ def query_person_by_guid(person_guid='#9202a8c04000641f800000000000cb7c'):
 		'name': None,
 		'date_of_birth': None,
 		'place_of_birth': None,
-		'/influence/influence_node/influenced_by': [{'name':None, 'guid': None}],
-		'/influence/influence_node/peers': [{'name':None, 'guid': None}],
-		'/influence/influence_node/influenced': [{'name':None, 'guid': None}],
-		"/people/person/parents": [{'name':None, 'guid': None}],
-		"/people/person/sibling_s": [{'name':None, 'guid': None}],
-		"/people/person/children": [{'name':None, 'guid': None}],
-		"/people/person/spouse_s": [{'name':None, 'guid': None}],
+		'/influence/influence_node/influenced_by': [{'name':None, 'guid': None, 'optional': True}],
+		'/influence/influence_node/peers': [{'name':None, 'guid': None, 'optional': True}],
+		'/influence/influence_node/influenced': [{'name':None, 'guid': None, 'optional': True}],
+		"/people/person/parents": [{'name':None, 'guid': None, 'optional': True}],
+		"/people/person/sibling_s": [{'name':None, 'guid': None, 'optional': True}],
+		"/people/person/children": [{'name':None, 'guid': None, 'optional': True}],
+		"/people/person/spouse_s": [{'name':None, 'guid': None, 'optional': True}],
+		"/education/academic/advisors": [{'name':None, 'guid': None, "optional": True}],
+	    "/education/academic/advisees": [{'name':None, 'guid': None, "optional": True}],
 	}
 	
 	# Create a session object
@@ -54,12 +51,17 @@ def extract_properties_from_results(results):
 	properties = {}
 	
 	if results:
-		properties['name'] = results['name']
-		properties['date_of_birth'] = results['date_of_birth']
-		properties['place_of_birth'] = results['place_of_birth']
+		# Use blank string instead of None - makes joining easier
+		properties['name'] =  normalize_strings(results['name'])
+		properties['date_of_birth'] = normalize_strings(results['date_of_birth'])
+		properties['place_of_birth'] = normalize_strings(results['place_of_birth'])
 	
 	return properties
 
+
+def normalize_strings(st):
+	# Convert to utf-8 and replace None with a blank string to faciliate join()
+	return st.encode('utf-8') if st!=None else ''
 
 '''
 Return a list of tuples: (guid, relationship type)
@@ -85,6 +87,10 @@ def extract_connections_from_results(results):
 			'/people/person/children') )
 		connections.extend( create_people_list(results,\
 			'/people/person/spouse_s') )
+		connections.extend( create_people_list(results,\
+			'/education/academic/advisors') )
+		connections.extend( create_people_list(results,\
+			'/education/academic/advisees') )
 			
 	return connections
 
@@ -106,47 +112,55 @@ def create_people_list(result_dict, full_conn_type):
 	return list_of_people
 
 
-def get_network_from_seed(seed_guid='#9202a8c04000641f800000000000cb7c'):
-	
+def get_network_from_seed(seed_guid='#9202a8c04000641f800000000000cb7c', max_num_of_nodes=100):
+	'''
+	Create a network used passed guid as seed (Charles Darwin is default),
+	and add the connections of up to max_num_of_nodes people (100 is default).
+	'''
 	nodefile = open('nodefile.csv', 'w')
 	edgefile = open('edgefile.csv', 'w')
 	
 	search_set = [] # can't iterate a mutating set, must be a list
 	search_set.append(seed_guid) # Darwin's is #9202a8c04000641f800000000000cb7c
 	
-	for i, person_guid in enumerate(search_set):
-		# TODO: May want to add a random timeout between iterations
-		# so we don't annoy Freebase.
+	try:
+		for i, person_guid in enumerate(search_set):
+			# TODO: May want to add a random timeout between iterations
+			# so we don't annoy Freebase.
 		
-		print "******" 			# debug
-		print "Iteration:", i, "guid:", person_guid, \
-			"Items in search set:",  len(search_set)	# debug
-		print "******" 			# debug
-		if i>MAX_NUM_OF_PEOPLE:
-			# Hardstop for debugging: better make sure we get a small number
-			# of correct results before we harvest the entire site.
-			break
+			print "******" 			# debug
+			print "Iteration:", i, "guid:", person_guid, \
+				"Items in search set:",  len(search_set)	# debug
+			print "******" 			# debug
+			if max_num_of_nodes>0 and i>max_num_of_nodes:
+				# Place a hard limit on the number of nodes.
+				# 0 for unlimited 
+				break
 		
-		connection_list, properties = query_person_by_guid(person_guid)
-		
-		# serialize properties to nodefile
-		print properties # debug
-		nodefile.write(person_guid + '\t' + '\t'.join(properties.values()) + '\n') 
-		
-		# serialize connections to edgefile
-		for connection in connection_list:
-			print connection['guid'], connection['name'], connection['conn_type']
-			name = None if connection['name']==None else connection['name'].encode('utf-8')
-			edgefile.write(person_guid + '\t' + properties['name'] + '\t' + \
-				connection['guid'] + '\t' + str(name) + '\t' + \
-				str(connection['conn_type']) + '\n') 
-			if connection['guid'] not in search_set:
-				search_set.append(connection['guid'])
+			connection_list, properties = query_person_by_guid(person_guid)
+			# print ">>>>>>>>", properties # debug
 			
-			# TODO: add counter for number of connections
+			# serialize properties to nodefile
+			#print properties # debug
+			nodefile.write(person_guid + '\t' + '\t'.join(properties.values()) + '\n') 
+		
+			# serialize connections to edgefile
+			for connection in connection_list:
+				print connection['guid'], connection['name'], connection['conn_type']
+				#name = None if connection['name']==None else connection['name'].encode('utf-8')
+				name = normalize_strings(connection['name'])
 				
-	nodefile.close()
-	edgefile.close()
+				edgefile.write(person_guid + '\t' + properties['name'] + '\t' + \
+					connection['guid'] + '\t' + str(name) + '\t' + \
+					str(connection['conn_type']) + '\n') 
+				if connection['guid'] not in search_set:
+					search_set.append(connection['guid'])
+			
+				# TODO: add counter for number of connections
+	
+	finally:			
+		nodefile.close()
+		edgefile.close()
 	
 	return len(search_set)
 
