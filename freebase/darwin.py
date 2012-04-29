@@ -186,8 +186,8 @@ def get_network_from_seed(seed_guid='#9202a8c04000641f800000000000cb7c', max_num
 	Create a network used passed guid as seed (Charles Darwin is default),
 	and add the connections of up to max_num_of_nodes people (100 is default).
 	'''
-	nodefile = open('nodefile.csv', 'w')
-	edgefile = open('edgefile.csv', 'w')
+	nodefile = open('nodefile.txt', 'w')
+	edgefile = open('edgefile.txt', 'w')
 	
 	search_set = [] # can't iterate on a mutating set, must be a list
 	search_set.append(seed_guid) # Darwin's is #9202a8c04000641f800000000000cb7c
