@@ -194,9 +194,6 @@ def get_network_from_seed(seed_guid='#9202a8c04000641f800000000000cb7c', max_num
 	
 	try:
 		for i, person_guid in enumerate(search_set):
-			# TODO: May want to add a random timeout between iterations
-			# so we don't annoy Freebase.
-		
 			print "******" 			# debug
 			print "Iteration: %s guid: %s Items in search set: %s" \
 				% (i, person_guid, len(search_set))# debug
@@ -211,6 +208,7 @@ def get_network_from_seed(seed_guid='#9202a8c04000641f800000000000cb7c', max_num
 			
 			if not properties:
 				# Something went wrong, move on
+				print "ERROR: empty properties for %s, skipping" % person_guid
 				continue
 			# print ">>>>>>>>", properties # debug
 			
