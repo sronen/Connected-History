@@ -1,5 +1,6 @@
 import sys            # Command-line arguments, etc.
 import metaweb        # Metaweb services
+import string
 
 '''
 Query for a person using his/her Freebase guid (default is Darwin's), and retrieve his/her properties
@@ -280,8 +281,9 @@ def filter_by_year(in_nodefile, out_nodefile, start_year=-10000, end_year=10000)
 			
 def find_person_by_name_and_dates(person_name_parts, year_of_birth=None, year_of_death=None):
 	'''
-	Return a list of (name, GUID, date_of_birth, date_of_depth) tuples of people
-	on Freebase matching all the given name parts and year of birth and/or death.
+	Return a list of dictonaries, each containing name, GUID, date_of_birth, 
+	date_of_death for a person on Freebase matching all the given name parts 
+	and year of birth and/or death.
 	'''
 	if not person_name_parts:
 		print 'find_person_by_name_and_dates: must pass person name!'
@@ -297,8 +299,14 @@ def find_person_by_name_and_dates(person_name_parts, year_of_birth=None, year_of
 	}]
 	
 	# name contains person name
-	for part in person_name_parts:
-		query[0].update({'name~=': part,})
+	for i, part in enumerate(person_name_parts):
+		# dictionary keys must be unique, so Freebase distinguishes between them
+		# by prefixing letters 
+		try:
+			query[0].update({'%s:name~=' % string.lowercase[i]: part,})
+		except KeyError:
+			print "ERROR: too many name parts, max is 26! Aborting"
+			return None
 	
 	if year_of_birth!=None:
 		# a bug in Freebase may require looking for >x and <=x+1 to get year x
@@ -314,16 +322,17 @@ def find_person_by_name_and_dates(person_name_parts, year_of_birth=None, year_of
 	# Submit query, get results
 	result = freebase.read(query)
 	if not result:
-		print ">>> ERROR: No results for name %s, birth %s, death %s" % \
-			(person_name_parts, str(year_of_birth), str(year_of_death))
 		return None
 		
 	# Prepare a list of tuples
-	possible_matches = \
-		[(person['name'], person['guid'], person['date_of_birth'], \
-		person['/people/deceased_person/date_of_death']) for person in result]
+	#possible_matches = \
+	#	[(person['name'], person['guid'], person['date_of_birth'], \
+	#	person['/people/deceased_person/date_of_death']) for person in result]
 	
-	return possible_matches
+	for person in result:
+		person.pop('type') # we don't need this...
+	
+	return result
 	
 	
 if __name__ == "__main__":
