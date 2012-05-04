@@ -84,7 +84,7 @@ def _find_relationship_target(relation_guid, relation_type, name_src):
 	
 	# Submit query, get results
 	result = freebase.read(query)
-	if result==None:
+	if not result:
 		return None, None
 	
 	# a relationship page contains two names; find the one different than the
@@ -276,7 +276,56 @@ def filter_by_year(in_nodefile, out_nodefile, start_year=-10000, end_year=10000)
 		
 		if year>=start_year and year<=end_year:
 			fout.write(line) # includes EOL
+
 			
+def find_person_by_name_and_dates(person_name_parts, year_of_birth=None, year_of_death=None):
+	'''
+	Return a list of (name, GUID, date_of_birth, date_of_depth) tuples of people
+	on Freebase matching all the given name parts and year of birth and/or death.
+	'''
+	if not person_name_parts:
+		print 'find_person_by_name_and_dates: must pass person name!'
+		return None
+	
+	# construct the query
+	query = [{
+		'type': '/people/person',
+		'name': None,
+		'guid': None,
+		'date_of_birth': None,
+		'/people/deceased_person/date_of_death': None,
+	}]
+	
+	# name contains person name
+	for part in person_name_parts:
+		query[0].update({'name~=': part,})
+	
+	if year_of_birth!=None:
+		# a bug in Freebase may require looking for >x and <=x+1 to get year x
+		query[0].update({'date_of_birth<': str(year_of_birth+1),
+			'date_of_birth>=': str(year_of_birth),
+		})
+	
+	if year_of_death!=None:
+		query[0].update({'/people/deceased_person/date_of_death<': str(year_of_death+1),
+			'/people/deceased_person/date_of_death>=': str(year_of_death),
+		})
+	
+	# Submit query, get results
+	result = freebase.read(query)
+	if not result:
+		print ">>> ERROR: No results for name %s, birth %s, death %s" % \
+			(person_name_parts, str(year_of_birth), str(year_of_death))
+		return None
+		
+	# Prepare a list of tuples
+	possible_matches = \
+		[(person['name'], person['guid'], person['date_of_birth'], \
+		person['/people/deceased_person/date_of_death']) for person in result]
+	
+	return possible_matches
+	
+	
 if __name__ == "__main__":
 	get_network_from_seed(seed_guid='#9202a8c04000641f800000000000cb7c', max_num_of_nodes=0)
 	
