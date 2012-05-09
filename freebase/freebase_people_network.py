@@ -279,11 +279,13 @@ def filter_by_year(in_nodefile, out_nodefile, start_year=-10000, end_year=10000)
 			fout.write(line) # includes EOL
 
 			
-def find_person_by_name_and_dates(person_name_parts, year_of_birth=None, year_of_death=None):
+def find_person_by_name_and_dates(person_name_parts, year_of_birth=None, 
+	year_of_death=None, strict_dates=False):
 	'''
 	Return a list of dictonaries, each containing name, GUID, date_of_birth, 
 	date_of_death for a person on Freebase matching all the given name parts 
 	and year of birth and/or death.
+	Returns an empty list if no match or if an error was encountered.
 	'''
 	if not person_name_parts:
 		print 'find_person_by_name_and_dates: must pass person name!'
@@ -306,7 +308,7 @@ def find_person_by_name_and_dates(person_name_parts, year_of_birth=None, year_of
 			query[0].update({'%s:name~=' % string.lowercase[i]: part,})
 		except KeyError:
 			print "ERROR: too many name parts, max is 26! Aborting"
-			return None
+			return [] # empty list
 	
 	if year_of_birth!=None:
 		# a bug in Freebase may require looking for >x and <=x+1 to get year x
@@ -315,6 +317,7 @@ def find_person_by_name_and_dates(person_name_parts, year_of_birth=None, year_of
 		})
 	
 	if year_of_death!=None:
+		# a bug in Freebase may require looking for >x and <=x+1 to get year x
 		query[0].update({'/people/deceased_person/date_of_death<': str(year_of_death+1),
 			'/people/deceased_person/date_of_death>=': str(year_of_death),
 		})
@@ -322,7 +325,7 @@ def find_person_by_name_and_dates(person_name_parts, year_of_birth=None, year_of
 	# Submit query, get results
 	result = freebase.read(query)
 	if not result:
-		return None
+		return [] # empty list
 		
 	# Prepare a list of tuples
 	#possible_matches = \
