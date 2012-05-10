@@ -1,1 +1,0 @@
-"Philippe II, Duke of Orléans" is listed as the son of "Duc d'Orléans" (#9202a8c04000641f80000000002203ce). The latter is a title ("/royalty/noble_title"), not a person ("/people/person"), which caused my code to crash.  
