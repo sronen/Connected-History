@@ -17,7 +17,9 @@ freebase = metaweb.Session("api.freebase.com")
 # some relationships link to relationship pages instead of person page;
 # values are the relationship type to look for in a relationship page and 
 # the name of the field containing the names of the two connected people.
-# NOTE: do not follow Influenecd and Influenced By connections.
+# NOTE: decided do not follow Influenecd and Influenced By connections.
+# TODO: query formats for some relationships (e.g., spouse) look different,
+# perhaps something is wrong. 
 SEARCH_CONNECTIONS = {
 	"/people/person/parents" : {"relation_type": None, "fieldname": None},
 	"/people/person/sibling_s" : {"relation_type": "/people/sibling_relationship", "fieldname": "sibling"}, 
@@ -339,5 +341,6 @@ def find_person_by_name_and_dates(person_name_parts, year_of_birth=None,
 	
 	
 if __name__ == "__main__":
-	get_network_from_seed(seed_guid='#9202a8c04000641f800000000000cb7c', max_num_of_nodes=0)
+	GUID = '#9202a8c04000641f800000000000cb7c' # Darwin
+	get_network_from_seed(seed_guid=GUID, max_num_of_nodes=0)
 	
